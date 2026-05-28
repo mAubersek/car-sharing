@@ -42,3 +42,9 @@ mp:
     hibernate-orm:
       log:
         sql: false
+
+smallrye:
+  jwt:
+    sign:
+      key:
+        location: private.pem
