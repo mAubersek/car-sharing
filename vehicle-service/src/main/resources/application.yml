@@ -18,6 +18,15 @@ quarkus:
     path: /openapi
   swagger-ui:
     always-include: true
+  smallrye-jwt:
+    enabled: true
+
+mp:
+  jwt:
+    verify:
+      publickey:
+        location: public.pem
+    issuer: car-sharing
 
 "%dev":
   quarkus:

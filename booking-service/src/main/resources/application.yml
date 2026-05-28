@@ -18,11 +18,20 @@ quarkus:
     path: /openapi
   swagger-ui:
     always-include: true
+  smallrye-jwt:
+    enabled: true
   rest-client:
     user-service:
       url: http://localhost:8081
     vehicle-service:
       url: http://localhost:8082
+
+mp:
+  jwt:
+    verify:
+      publickey:
+        location: public.pem
+    issuer: car-sharing
 
 "%dev":
   quarkus:
