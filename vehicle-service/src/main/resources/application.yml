@@ -10,8 +10,8 @@ quarkus:
     jdbc:
       url: jdbc:postgresql://localhost:5432/vehicledb
   hibernate-orm:
-    database:
-      generation: update
+    schema-management:
+      strategy: drop-and-create
     log:
       sql: true
   smallrye-openapi:
