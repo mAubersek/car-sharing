@@ -1,0 +1,35 @@
+quarkus:
+  application:
+    name: user-service
+  http:
+    port: 8081
+  datasource:
+    db-kind: postgresql
+    username: carsharing
+    password: carsharing
+    jdbc:
+      url: jdbc:postgresql://localhost:5432/userdb
+  hibernate-orm:
+    database:
+      generation: update
+    log:
+      sql: true
+  smallrye-openapi:
+    path: /openapi
+  swagger-ui:
+    always-include: true
+
+"%dev":
+  quarkus:
+    hibernate-orm:
+      log:
+        sql: true
+
+"%prod":
+  quarkus:
+    datasource:
+      jdbc:
+        url: jdbc:postgresql://${DB_HOST:localhost}:5432/userdb
+    hibernate-orm:
+      log:
+        sql: false

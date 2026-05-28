@@ -1,0 +1,45 @@
+quarkus:
+  application:
+    name: booking-service
+  http:
+    port: 8083
+  datasource:
+    db-kind: postgresql
+    username: carsharing
+    password: carsharing
+    jdbc:
+      url: jdbc:postgresql://localhost:5432/bookingdb
+  hibernate-orm:
+    database:
+      generation: update
+    log:
+      sql: true
+  smallrye-openapi:
+    path: /openapi
+  swagger-ui:
+    always-include: true
+  rest-client:
+    user-service:
+      url: http://localhost:8081
+    vehicle-service:
+      url: http://localhost:8082
+
+"%dev":
+  quarkus:
+    hibernate-orm:
+      log:
+        sql: true
+
+"%prod":
+  quarkus:
+    datasource:
+      jdbc:
+        url: jdbc:postgresql://${DB_HOST:localhost}:5432/bookingdb
+    hibernate-orm:
+      log:
+        sql: false
+    rest-client:
+      user-service:
+        url: http://${USER_SERVICE_HOST:localhost}:8081
+      vehicle-service:
+        url: http://${VEHICLE_SERVICE_HOST:localhost}:8082
