@@ -50,6 +50,11 @@
             <artifactId>quarkus-arc</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.carsharing</groupId>
+            <artifactId>shared</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit</artifactId>
             <scope>test</scope>
@@ -58,11 +63,6 @@
             <groupId>io.rest-assured</groupId>
             <artifactId>rest-assured</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.carsharing</groupId>
-            <artifactId>shared</artifactId>
-            <version>${project.version}</version>
         </dependency>
     </dependencies>
 
@@ -73,6 +73,15 @@
                 <artifactId>quarkus-maven-plugin</artifactId>
                 <version>${quarkus.platform.version}</version>
                 <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>generate-code</goal>
+                            <goal>generate-code-tests</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

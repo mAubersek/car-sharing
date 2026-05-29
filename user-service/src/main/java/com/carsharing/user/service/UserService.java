@@ -1,17 +1,20 @@
 package com.carsharing.user.service;
 
-import com.carsharing.shared.dto.LoginRequest;
-import com.carsharing.shared.dto.RegisterRequest;
+
+import com.carsharing.user.dto.LoginRequest;
+import com.carsharing.user.dto.RegisterRequest;
 import com.carsharing.user.entity.User;
 import io.quarkus.elytron.security.common.BcryptUtil;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 
 @ApplicationScoped
 public class UserService {
 
+    @Transactional
     public User register(RegisterRequest req) {
         PanacheQuery<User> query = User.find("email", req.getEmail());
         if (query.firstResult() != null) {

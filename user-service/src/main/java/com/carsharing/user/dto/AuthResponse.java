@@ -1,4 +1,4 @@
-package com.carsharing.shared.dto;
+package com.carsharing.user.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
