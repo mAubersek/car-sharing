@@ -35,7 +35,7 @@ public class Booking extends PanacheEntity {
     public Status status;
 
     @Column(nullable = false)
-    LocalDateTime createdAt;
+    public LocalDateTime createdAt;
 
     @PrePersist
     public void prePersist() {

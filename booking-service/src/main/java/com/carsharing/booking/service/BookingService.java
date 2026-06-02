@@ -105,7 +105,8 @@ public class BookingService {
         return booking;
     }
 
-    public List<Booking> listByUserId(Long userId) {
+    public List<Booking> listByCurrentUserId() {
+        long userId = Long.parseLong(jwt.getSubject());
         return Booking.list("userId",  userId);
     }
 
