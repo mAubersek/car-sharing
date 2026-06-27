@@ -5,6 +5,9 @@ import com.carsharing.booking.entity.Booking;
 import com.carsharing.booking.event.BookingEventPublisher;
 import com.carsharing.booking.integration.VehicleClient;
 import com.carsharing.shared.dto.VehicleResponse;
+import com.carsharing.shared.event.BookingCancelledEvent;
+import com.carsharing.shared.event.BookingEndedEvent;
+import com.carsharing.shared.event.BookingStartedEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -118,6 +121,10 @@ public class BookingService {
         }
         booking.status = Booking.Status.ACTIVE;
         booking.actualStartTime = LocalDateTime.now();
+
+        // Update status in vehicle-service
+        eventPublisher.publishBookingStarted(booking);
+
         return booking;
     }
 
@@ -140,6 +147,8 @@ public class BookingService {
                 .multiply(BigDecimal.valueOf(minutes))
                 .divide(BigDecimal.valueOf(60), 2, java.math.RoundingMode.HALF_UP);
 
+        eventPublisher.publishBookingEnded(booking);
+
         return booking;
     }
 
@@ -153,14 +162,17 @@ public class BookingService {
         Booking booking = getOne(id);
         assertOwnership(booking);
         if (booking.status == Booking.Status.CANCELED ||
-            booking.status == Booking.Status.COMPLETED) {
+            booking.status == Booking.Status.COMPLETED ||
+            booking.status == Booking.Status.ACTIVE) {
             throw new WebApplicationException(
-                    "Booking is already completed or cancelled",
+                    "Booking must have status CONFIRMED to cancel",
                     Response.Status.CONFLICT
             );
         }
 
         booking.status = Booking.Status.CANCELED;
+
+        eventPublisher.publishBookingCancelled(booking);
 
         return booking;
     }
