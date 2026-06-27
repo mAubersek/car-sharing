@@ -28,7 +28,16 @@ public class Booking extends PanacheEntity {
     public LocalDateTime endTime;
 
     @Column(nullable = false)
-    public BigDecimal totalPrice;
+    public BigDecimal pricePerHour;
+
+    @Column(nullable = false)
+    public BigDecimal estimatedPrice;
+
+    public BigDecimal finalPrice;
+
+    public LocalDateTime actualStartTime;
+
+    public LocalDateTime actualEndTime;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

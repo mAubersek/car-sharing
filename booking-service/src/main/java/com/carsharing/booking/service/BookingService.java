@@ -13,7 +13,9 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @ApplicationScoped
@@ -28,17 +30,37 @@ public class BookingService {
 
     @Transactional
     public Booking createBooking(CreateBookingRequest req, String authHeader) {
-        // userID from jwt
         long userId = Long.parseLong(jwt.getSubject());
+
         // validate time of booking
         if (!req.getEndTime().isAfter(req.getStartTime())) {
             throw new WebApplicationException(
-                    "Booking end time is before start time",
+                    "Booking end time must be after start time",
                     Response.Status.BAD_REQUEST
             );
         }
+
+        long minutes = Duration.between(req.getStartTime(), req.getEndTime()).toMinutes();
+        if (minutes < 60) {
+            throw new WebApplicationException(
+                    "Minimum booking duration is 1 hour",
+                    Response.Status.BAD_REQUEST
+            );
+        }
+
         // call vehicle client
-        VehicleResponse vehicleResponse = vehicleClient.getVehicle(req.getVehicleId(), authHeader);
+        VehicleResponse vehicleResponse;
+        try {
+            vehicleResponse = vehicleClient.getVehicle(req.getVehicleId(), authHeader);
+        } catch (WebApplicationException e) {
+            if (e.getResponse().getStatus() == 404) {
+                throw new WebApplicationException(
+                        "Vehicle with id " + req.getVehicleId() + " not found",
+                        Response.Status.NOT_FOUND
+                );
+            }
+            throw e; // rethrow
+        }
 
         if (!"AVAILABLE".equals(vehicleResponse.getStatus())) {
             throw new WebApplicationException(
@@ -47,9 +69,10 @@ public class BookingService {
             );
         }
 
-        // calculate price
-        long hours =  Duration.between(req.getStartTime(), req.getEndTime()).toHours();
-        BigDecimal totalPrice = vehicleResponse.getPricePerHour().multiply(BigDecimal.valueOf(hours));
+        // calculate estimated price (per-minute)
+        BigDecimal estimatedPrice = vehicleResponse.getPricePerHour()
+                .multiply(BigDecimal.valueOf(minutes))
+                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
 
         // persist
         Booking booking = new Booking();
@@ -57,7 +80,8 @@ public class BookingService {
         booking.vehicleId = req.getVehicleId();
         booking.startTime = req.getStartTime();
         booking.endTime = req.getEndTime();
-        booking.totalPrice = totalPrice;
+        booking.pricePerHour = vehicleResponse.getPricePerHour();
+        booking.estimatedPrice = estimatedPrice;
         booking.status = Booking.Status.CONFIRMED;
         booking.persist();
 
@@ -87,7 +111,7 @@ public class BookingService {
             );
         }
         booking.status = Booking.Status.ACTIVE;
-
+        booking.actualStartTime = LocalDateTime.now();
         return booking;
     }
 
@@ -95,13 +119,21 @@ public class BookingService {
     public Booking endRide(Long id) {
         Booking booking = getOne(id);
         assertOwnership(booking);
+
         if (booking.status != Booking.Status.ACTIVE) {
             throw new WebApplicationException(
                     "Booking must have status ACTIVE to end the ride",
-                    Response.Status.CONFLICT
-            );
+                    Response.Status.CONFLICT);
         }
+
         booking.status = Booking.Status.COMPLETED;
+        booking.actualEndTime = LocalDateTime.now();
+
+        long minutes = Duration.between(booking.actualStartTime, booking.actualEndTime).toMinutes();
+        booking.finalPrice = booking.pricePerHour
+                .multiply(BigDecimal.valueOf(minutes))
+                .divide(BigDecimal.valueOf(60), 2, java.math.RoundingMode.HALF_UP);
+
         return booking;
     }
 

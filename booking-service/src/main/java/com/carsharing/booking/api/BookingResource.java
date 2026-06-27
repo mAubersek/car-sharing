@@ -63,6 +63,7 @@ public class BookingResource {
 
     @POST
     @Path("/{id}/end")
+    @RolesAllowed({"USER", "ADMIN"})
     public BookingResponse endBooking(@PathParam("id") Long id) {
         return BookingMapper.toResponse(bookingService.endRide(id));
     }

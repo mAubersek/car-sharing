@@ -12,7 +12,10 @@ public class BookingMapper {
         res.setVehicleId(booking.vehicleId);
         res.setStartTime(booking.startTime);
         res.setEndTime(booking.endTime);
-        res.setTotalPrice(booking.totalPrice);
+        res.setEstimatedPrice(booking.estimatedPrice);
+        res.setFinalPrice(booking.finalPrice);
+        res.setActualStartTime(booking.actualStartTime);
+        res.setActualEndTime(booking.actualEndTime);
         res.setStatus(booking.status.toString());
         res.setCreatedAt(booking.createdAt);
         return res;

@@ -14,7 +14,10 @@ public class BookingResponse {
     private Long id;
     private Long userId;
     private Long vehicleId;
-    private BigDecimal totalPrice;
+    private BigDecimal estimatedPrice;
+    private BigDecimal finalPrice;
+    private LocalDateTime actualStartTime;
+    private LocalDateTime actualEndTime;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private String status;
