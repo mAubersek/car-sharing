@@ -2,6 +2,7 @@ package com.carsharing.booking.service;
 
 import com.carsharing.booking.dto.CreateBookingRequest;
 import com.carsharing.booking.entity.Booking;
+import com.carsharing.booking.event.BookingEventPublisher;
 import com.carsharing.booking.integration.VehicleClient;
 import com.carsharing.shared.dto.VehicleResponse;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -27,6 +28,9 @@ public class BookingService {
     @Inject
     @RestClient
     VehicleClient vehicleClient;
+
+    @Inject
+    BookingEventPublisher eventPublisher;
 
     @Transactional
     public Booking createBooking(CreateBookingRequest req, String authHeader) {
@@ -84,6 +88,8 @@ public class BookingService {
         booking.estimatedPrice = estimatedPrice;
         booking.status = Booking.Status.CONFIRMED;
         booking.persist();
+
+        eventPublisher.publishBookingCreated(booking);
 
         return booking;
     }
