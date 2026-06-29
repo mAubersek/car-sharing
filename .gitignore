@@ -46,3 +46,4 @@ nb-configuration.xml
 
 # JWT keys
 **/private.pem
+infrastructure/k8s/03-jwt-secret.yaml
