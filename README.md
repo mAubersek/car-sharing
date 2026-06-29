@@ -1,62 +1,151 @@
-# car-sharing
+# Car Sharing
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+A microservices car-sharing demo built with Quarkus, PostgreSQL and NATS JetStream.
 
-If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
+## Architecture
 
-## Running the application in dev mode
+Three services, each owning its own database, communicating via REST (sync) and NATS JetStream (async).
 
-You can run your application in dev mode that enables live coding using:
+```
+                    ┌──────────────┐
+                    │   Frontend   │
+                    │   (Angular)  │
+                    └──────┬───────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        │                  │                  │
+        ▼                  ▼                  ▼
+  ┌──────────┐      ┌────────────┐    ┌────────────┐
+  │   user   │      │  vehicle   │    │  booking   │
+  │ :8081    │      │  :8082     │    │  :8083     │
+  └────┬─────┘      └─────┬──────┘    └──────┬─────┘
+       │                  │   ▲              │
+       │                  │   │ REST         │
+       │                  │   └──────────────┤
+       │                  │                  │
+       │                  │  ◄── NATS ───────┤
+       │                  │                  │
+       ▼                  ▼                  ▼
+   ┌────────┐         ┌─────────┐       ┌─────────┐
+   │ userdb │         │vehicledb│       │bookingdb│
+   └────────┘         └─────────┘       └─────────┘
 
-```shell script
-./mvnw quarkus:dev
+       NATS JetStream (booking.created / .started / .ended / .cancelled)
 ```
 
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
+### Services
 
-## Packaging and running the application
+- **user-service**: registration, login, JWT issuance. Owns user identity and roles.
+- **vehicle-service**: vehicle catalog and status. Subscribes to booking events to update availability.
+- **booking-service**: booking and managing rides. Calls vehicle-service synchronously for availability, emits NATS events for state propagation.
 
-The application can be packaged using:
+### Event Flow (NATS JetStream)
 
-```shell script
-./mvnw package
+| Booking action | Event published | Vehicle status transition |
+|---|---|---|
+| Create | `booking.created` | `AVAILABLE → RESERVED` |
+| Start ride | `booking.started` | `RESERVED → IN_USE` |
+| End ride | `booking.ended` | `IN_USE → AVAILABLE` |
+| Cancel | `booking.cancelled` | `RESERVED → AVAILABLE` |
+
+## Stack
+
+- **Quarkus 3.36** (Java 21)
+- **PostgreSQL 16** - one instance, three databases
+- **NATS JetStream** - durable messaging
+- **Maven** - multi-module monorepo
+- **Docker** + **Kubernetes (kind)** - local deployment
+- **SmallRye JWT** - auth
+- **Hibernate ORM + Panache** - persistence
+- **Lombok** - DTO boilerplate
+- **Bcrypt** - password hashing
+
+## Running Locally
+
+**Prerequisites:** JDK 21, Docker, Maven.
+
+The JWT signing keys aren't committed to the repo
+```bash
+# Generate RSA key pair in PKCS8 format
+openssl genrsa -out private.pem 2048
+openssl rsa -in private.pem -pubout -out public.pem
+openssl pkcs8 -topk8 -inform PEM -in private.pem -out private-pkcs8.pem -nocrypt
+
+# Place keys in user-service
+mv private-pkcs8.pem user-service/src/main/resources/private.pem
+cp public.pem user-service/src/main/resources/public.pem
+
+# Distribute public key to the other service
+cp public.pem vehicle-service/src/main/resources/public.pem
+mv public.pem booking-service/src/main/resources/public.pem
+
+# Cleanup
+rm private.pem
 ```
 
-It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/quarkus-app/lib/` directory.
+### 1. Start infrastructure
 
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar`.
-
-If you want to build an _über-jar_, execute the following command:
-
-```shell script
-./mvnw package -Dquarkus.package.jar.type=uber-jar
+```bash
+cd infrastructure
+docker compose up -d
 ```
 
-The application, packaged as an _über-jar_, is now runnable using `java -jar target/*-runner.jar`.
+This brings up Postgres on `5432` and NATS on `4222`.
 
-## Creating a native executable
+### 2. Run each service in dev mode
 
-You can create a native executable using:
+In three separate terminals:
 
-```shell script
-./mvnw package -Dnative
+```bash
+cd user-service    && ../mvnw quarkus:dev   # :8081
+cd vehicle-service && ../mvnw quarkus:dev   # :8082
+cd booking-service && ../mvnw quarkus:dev   # :8083
 ```
 
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
+### 3. Seeded credentials
 
-```shell script
-./mvnw package -Dnative -Dquarkus.native.container-build=true
+On startup, user-service seeds:
+
+- **admin@carsharing.com** / pw: `admin123` (role: ADMIN)
+- **user@example.com** / pw: `user123` (role: USER)
+
+vehicle-service seeds 4 vehicles via `import.sql`.
+
+### 4. Swagger UI
+
+Swagger UI is available for each service:
+
+- `http://localhost:8081/q/swagger-ui`
+- `http://localhost:8082/q/swagger-ui`
+- `http://localhost:8083/q/swagger-ui`
+
+## Running on Kubernetes
+
+**Prerequisites:** Docker, `kind`, `kubectl`. Images are public on Docker Hub (`maubersek/car-sharing-*`).
+
+#### 1. Create the cluster
+
+```bash
+kind create cluster --name carsharing
+kubectl config set-context --current --namespace=carsharing
 ```
 
-You can then execute your native executable with: `./target/car-sharing-1.0-SNAPSHOT-runner`
+#### 2. Apply all manifests
 
-If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
+```bash
+kubectl apply -f infrastructure/k8s/
+```
 
-## Provided Code
+View status of pods:
 
-### REST
+```bash
+kubectl get pods -w
+```
 
-Easily start your REST Web Services
+#### 3. Port-forward to access the services
 
-[Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
+```bash
+kubectl port-forward svc/user-service    9081:8081 &
+kubectl port-forward svc/vehicle-service 9082:8082 &
+kubectl port-forward svc/booking-service 9083:8083 &
+```
