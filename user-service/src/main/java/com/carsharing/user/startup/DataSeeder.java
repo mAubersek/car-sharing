@@ -24,9 +24,9 @@ public class DataSeeder {
         admin.persist();
 
         User user = new User();
-        user.firstName = "John";
-        user.lastName = "Doe";
-        user.email = "john.doe@gmail.com";
+        user.firstName = "User";
+        user.lastName = "Lastname";
+        user.email = "user@exampe.com";
         user.password = BcryptUtil.bcryptHash("user123");
         user.role = User.Role.USER;
         user.persist();
